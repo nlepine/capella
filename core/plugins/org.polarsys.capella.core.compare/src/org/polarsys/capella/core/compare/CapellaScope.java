@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.polarsys.capella.core.compare;
 
+import static org.eclipse.emf.diffmerge.EMFDiffMergePlugin.getDefault;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -21,6 +23,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.diffmerge.sirius.SiriusScope;
@@ -356,10 +359,10 @@ public class CapellaScope extends SiriusScope {
    * @see org.eclipse.emf.diffmerge.impl.scopes.FragmentedModelScope#save()
    */
   @Override
-  public boolean save() throws Exception {
-    boolean result = checkWritePermission();
-    if (result)
-      result = super.save();
+  public IStatus save() {
+    boolean canWrite = checkWritePermission();
+    IStatus result = canWrite? super.save():
+      getDefault().createErrorStatus(Messages.CapellaScope_WriteError);
     return result;
   }
   

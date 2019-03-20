@@ -15,7 +15,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.emf.diffmerge.api.scopes.IModelScope;
+import org.eclipse.emf.diffmerge.generic.api.scopes.ITreeDataScope;
 import org.eclipse.emf.diffmerge.sirius.SiriusMatchPolicy;
 import org.eclipse.emf.diffmerge.structures.common.comparable.ComparableTreeMap;
 import org.eclipse.emf.ecore.EClass;
@@ -210,7 +210,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param scope_p a non-null scope that covers element_p
    * @return a potentially null object
    */
-  protected String getCapellaDefaultContentRootSemanticID(EObject element_p, IModelScope scope_p) {
+  protected String getCapellaDefaultContentRootSemanticID(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     String result = null;
     EObject root = EcoreUtil.getRootContainer(element_p);
     if (root != null && root != element_p)
@@ -226,7 +227,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @return a potentially null object
    */
   protected String getCapellaDefaultContentSemanticID(
-      EObject element_p, IModelScope scope_p) {
+      EObject element_p, ITreeDataScope<EObject> scope_p) {
     String result = null;
     final String rootPrefix =
         getCapellaDefaultContentRootSemanticID(element_p, scope_p);
@@ -302,7 +303,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @return a potentially null string
    */
   protected String getFreelyNamedElementUniqueName(AbstractNamedElement element_p,
-      IModelScope scope_p) {
+      ITreeDataScope<EObject> scope_p) {
     String result = null;
     if (useFineGrainedCriterion(CRITERION_QNAMES_EXCHANGES)) {
       if (element_p instanceof FunctionalExchange) {
@@ -329,23 +330,25 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
   }
   
   /**
-   * @see org.eclipse.emf.diffmerge.impl.policies.DefaultMatchPolicy#getIntrinsicID(org.eclipse.emf.ecore.EObject)
+   * @see org.eclipse.emf.diffmerge.impl.policies.ConfigurableMatchPolicy#getIntrinsicID(org.eclipse.emf.ecore.EObject, org.eclipse.emf.diffmerge.generic.api.scopes.ITreeDataScope)
    */
   @Override
-  protected String getIntrinsicID(EObject element_p) {
+  protected String getIntrinsicID(EObject element_p, ITreeDataScope<EObject> scope_p) {
     String result = null;
-    if (element_p instanceof ModelElement && useFineGrainedCriterion(CRITERION_INTRINSIC_ID_SID))
+    if (element_p instanceof ModelElement && useFineGrainedCriterion(CRITERION_INTRINSIC_ID_SID)) {
       result = ((ModelElement) element_p).getSid();
-    if (result == null)
-      result = super.getIntrinsicID(element_p);
+    }
+    if (result == null) {
+      result = super.getIntrinsicID(element_p, scope_p);
+    }
     return result;
   }
   
   /**
-   * @see org.eclipse.emf.diffmerge.sirius.SiriusMatchPolicy#getName(org.eclipse.emf.ecore.EObject, org.eclipse.emf.diffmerge.api.scopes.IModelScope)
+   * @see org.eclipse.emf.diffmerge.sirius.SiriusMatchPolicy#getName(org.eclipse.emf.ecore.EObject, org.eclipse.emf.diffmerge.generic.api.scopes.ITreeDataScope)
    */
   @Override
-  protected String getName(EObject element_p, IModelScope scope_p) {
+  protected String getName(EObject element_p, ITreeDataScope<EObject> scope_p) {
     String result = null;
     if (element_p instanceof AbstractNamedElement &&
         !isInstanceOf(element_p, getUnsignificantNamedElementSubtypes())) {
@@ -412,7 +415,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @return a potentially null object
    */
   protected String getTwoEndedElementSemanticID(
-      EObject element_p, EObject end1_p, EObject end2_p, IModelScope scope_p) {
+      EObject element_p, EObject end1_p, EObject end2_p, ITreeDataScope<EObject> scope_p) {
     String result = null;
     if (end1_p != null && end2_p != null) {
       String id1 = getMatchID(end1_p, scope_p);
@@ -441,7 +444,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @return a potentially null string
    */
   protected String getTwoEndedElementUniqueName(AbstractNamedElement element_p,
-      EObject end1_p, EObject end2_p, IModelScope scope_p) {
+      EObject end1_p, EObject end2_p, ITreeDataScope<EObject> scope_p) {
     String result = null;
     if (end1_p != null && end2_p != null) {
       String qname1 = getMatchID(end1_p, scope_p);
@@ -464,10 +467,10 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
   }
   
   /**
-   * @see org.eclipse.emf.diffmerge.sirius.SiriusMatchPolicy#getSemanticID(org.eclipse.emf.ecore.EObject, org.eclipse.emf.diffmerge.api.scopes.IModelScope)
+   * @see org.eclipse.emf.diffmerge.sirius.SiriusMatchPolicy#getSemanticID(org.eclipse.emf.ecore.EObject, org.eclipse.emf.diffmerge.generic.api.scopes.ITreeDataScope)
    */
   @Override
-  protected String getSemanticID(EObject element_p, IModelScope scope_p) {
+  protected String getSemanticID(EObject element_p, ITreeDataScope<EObject> scope_p) {
     String result = null;
     if (useFineGrainedCriterion(CRITERION_SEMANTICS_P2L) &&
         isMainCapellaRoot(element_p, scope_p)) {
@@ -486,10 +489,11 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
   }
   
   /**
-   * @see org.eclipse.emf.diffmerge.impl.policies.ConfigurableMatchPolicy#getStructureBasedRootQualifier(org.eclipse.emf.ecore.EObject, org.eclipse.emf.diffmerge.api.scopes.IModelScope)
+   * @see org.eclipse.emf.diffmerge.impl.policies.ConfigurableMatchPolicy#getStructureBasedRootQualifier(org.eclipse.emf.ecore.EObject, org.eclipse.emf.diffmerge.generic.api.scopes.ITreeDataScope)
    */
   @Override
-  protected String getStructureBasedRootQualifier(EObject element_p, IModelScope scope_p) {
+  protected String getStructureBasedRootQualifier(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     String result = null;
     if (useFineGrainedCriterion(CRITERION_SEMANTICS_P2L) &&
         isMainCapellaRoot(element_p, scope_p)) {
@@ -515,7 +519,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param scope_p a non-null scope that covers element_p
    * @return a potentially null object
    */
-  protected String getTechnicalElementSemanticID(EObject element_p, IModelScope scope_p) {
+  protected String getTechnicalElementSemanticID(EObject element_p, ITreeDataScope<EObject> scope_p) {
     String result = null;
     if (element_p instanceof AbstractTrace) {
       // Abstract Trace
@@ -646,7 +650,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @return a potentially null object
    */
   protected String getViewpointReferenceSemanticID(ViewpointReference element_p,
-      IModelScope scope_p) {
+      ITreeDataScope<EObject> scope_p) {
     String result = null;
     String vpId = element_p.getVpId();
     if (vpId != null)
@@ -676,13 +680,13 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a non-null element
    * @param scope_p a non-null scope to which the element belongs
    */
-  protected boolean isMainCapellaRoot(EObject element_p, IModelScope scope_p) {
+  protected boolean isMainCapellaRoot(EObject element_p, ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof Project || element_p instanceof Library) {
       result = isUniqueSiblingOfItsType(element_p, scope_p);
       if (result && element_p instanceof Library) {
         // For libraries, additional constraint that there is no project
-        for (EObject root : scope_p.getContents()) {
+        for (EObject root : scope_p.getRoots()) {
           if (root instanceof Project && !(root instanceof Library)) {
             result = false;
             break;
@@ -698,7 +702,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isPredefinedBooleanLiteral(EObject element_p, IModelScope scope_p) {
+  protected boolean isPredefinedBooleanLiteral(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof LiteralBooleanValue) {
       EObject container = getContainer(element_p, scope_p);
@@ -714,7 +719,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isPredefinedType(EObject element_p, IModelScope scope_p) {
+  protected boolean isPredefinedType(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof DataType) {
       EObject container = getContainer(element_p, scope_p);
@@ -730,7 +736,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isPredefinedTypePackage(EObject element_p, IModelScope scope_p) {
+  protected boolean isPredefinedTypePackage(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof DataPkg) {
       EObject container = getContainer(element_p, scope_p);
@@ -749,7 +756,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isPredefinedTypeProperty(EObject element_p, IModelScope scope_p) {
+  protected boolean isPredefinedTypeProperty(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof NumericValue) {
       EObject container = getContainer(element_p, scope_p);
@@ -774,7 +782,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isProgressStatus(EObject element_p, IModelScope scope_p) {
+  protected boolean isProgressStatus(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     return element_p instanceof EnumerationPropertyType &&
         getContainer(element_p, scope_p) instanceof Project &&
         CapellaProjectHelper.PROGRESS_STATUS_KEYWORD.equals(
@@ -786,7 +795,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isProgressStatusLiteral(EObject element_p, IModelScope scope_p) {
+  protected boolean isProgressStatusLiteral(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     return element_p instanceof EnumerationPropertyLiteral &&
         isProgressStatus(getContainer(element_p, scope_p), scope_p) &&
         CAPELLA_PROGRESS_STATUS_LITERALS.contains(
@@ -798,7 +808,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isProjectApproach(EObject element_p, IModelScope scope_p) {
+  protected boolean isProjectApproach(EObject element_p, ITreeDataScope<EObject> scope_p) {
     return element_p instanceof KeyValue &&
         getContainer(element_p, scope_p) instanceof Project &&
         CAPELLA_PROJECT_APPROACH.equals(((KeyValue)element_p).getKey());
@@ -809,7 +819,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isRootFunction(EObject element_p, IModelScope scope_p) {
+  protected boolean isRootFunction(EObject element_p, ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof AbstractFunction) {
       EObject container = getContainer(element_p, scope_p);
@@ -825,7 +835,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isRootFunctionRealization(EObject element_p, IModelScope scope_p) {
+  protected boolean isRootFunctionRealization(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof FunctionRealization) {
       FunctionRealization realization = (FunctionRealization)element_p;
@@ -840,7 +851,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isRootComponent(EObject element_p, IModelScope scope_p) {
+  protected boolean isRootComponent(EObject element_p, ITreeDataScope<EObject> scope_p) {
     return element_p instanceof Component &&
         BlockArchitectureExt.isRootComponent((Component)element_p);
   }
@@ -850,7 +861,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isSystemComponentAllocation(EObject element_p, IModelScope scope_p) {
+  protected boolean isSystemComponentAllocation(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof ComponentRealization) {
       ComponentRealization allocation = (ComponentRealization)element_p;
@@ -869,7 +881,7 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isSystemComponentPart(EObject element_p, IModelScope scope_p) {
+  protected boolean isSystemComponentPart(EObject element_p, ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof Part) {
       Part part = (Part) element_p;
@@ -883,7 +895,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isSystemStateMachine(EObject element_p, IModelScope scope_p) {
+  protected boolean isSystemStateMachine(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     boolean result = false;
     if (element_p instanceof StateMachine) {
       EObject container = getContainer(element_p, scope_p);
@@ -898,7 +911,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a potentially null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isSystemStateMachineMainRegion(EObject element_p, IModelScope scope_p) {
+  protected boolean isSystemStateMachineMainRegion(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     return element_p instanceof Region &&
         isSystemStateMachine(getContainer(element_p, scope_p), scope_p) &&
         isUniqueSiblingOfItsType(element_p, scope_p);
@@ -933,7 +947,8 @@ public class CapellaMatchPolicy extends SiriusMatchPolicy {
    * @param element_p a non-null element
    * @param scope_p a non-null scope that covers element_p
    */
-  protected boolean isUniqueModelingArchitectureChild(EObject element_p, IModelScope scope_p) {
+  protected boolean isUniqueModelingArchitectureChild(EObject element_p,
+      ITreeDataScope<EObject> scope_p) {
     return getContainer(element_p, scope_p) instanceof ModellingArchitecture &&
         isInDiscriminatingContainment(element_p, scope_p);
   }
