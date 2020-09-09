@@ -16,7 +16,7 @@ include "https://download.eclipse.org/sirius/updates/stable/6.4.0-S20200731-0935
 
 with source, requirements
 
-location eclipse "http://download.eclipse.org/releases/2020-06" {
+location eclipse "http://download.eclipse.org/releases/2020-09" {
 	org.eclipse.sdk.feature.group
 	org.eclipse.platform.feature.group
 	org.eclipse.draw2d.source.feature.group
@@ -90,7 +90,7 @@ location diffmerge-core "https://download.eclipse.org/diffmerge/releases/0.12.0/
 	org.eclipse.emf.diffmerge.egit.feature.source.feature.group
 }
 
-location amalgam "https://download.eclipse.org/modeling/amalgam/updates/stable/1.11.0-S20191007/capella" {
+location amalgam "https://download.eclipse.org/modeling/amalgam/updates/nightly/master-refs-changes-60-169060-1-58/capella" {
 	org.eclipse.amalgam.explorer.activity.source.feature.group
 }
 
