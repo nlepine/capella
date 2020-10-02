@@ -48,13 +48,14 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
   /**
    * Cache for InstanceRole -> EventContext structure.
    */
-  private static Map<InstanceRole, List<EventContext>> instanceRoleToEventContextCache = new ConcurrentHashMap<InstanceRole, List<EventContext>>();
+  private static Map<InstanceRole, List<EventContext>> instanceRoleToEventContextCache = new ConcurrentHashMap<>();
 
   /**
    * @see org.eclipse.sirius.business.api.refresh.IRefreshExtension#beforeRefresh(org.eclipse.sirius.DDiagram)
    */
   @Override
   public void beforeRefresh(DDiagram diagram) {
+    clearCaches();
     super.beforeRefresh(diagram);
   }
 
@@ -63,11 +64,15 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    */
   @Override
   public void postRefresh(DDiagram diagram) {
+    clearCaches();
+    super.postRefresh(diagram);
+  }
+
+  private void clearCaches() {
     interactionCache.clearCache();
     elementToContainerCache.clear();
     instanceRoleToEventContextCache.clear();
     endToEventCache.clear();
-    super.postRefresh(diagram);
   }
 
   /**

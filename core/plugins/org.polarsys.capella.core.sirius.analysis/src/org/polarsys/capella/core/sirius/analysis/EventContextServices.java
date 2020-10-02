@@ -20,12 +20,13 @@ import static org.polarsys.capella.core.sirius.analysis.refresh.extension.Intera
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putEndToEventCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putInstanceRoleToEventContextCache;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
-import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -51,6 +52,10 @@ import org.polarsys.capella.core.data.interaction.TimeLapse;
  */
 public class EventContextServices {
 
+  private EventContextServices() {
+    super();
+  }
+
   /**
    * Return abstract end covered TimeLapse/InstanceRole.
    * 
@@ -63,16 +68,10 @@ public class EventContextServices {
   public static Optional<CapellaElement> getEvent(AbstractEnd end, InstanceRole instanceRole) {
     Optional<CapellaElement> timeLapse = getEndToEventCache(end);
     if (!timeLapse.isPresent()) {
-      // compute result from EventContext structure
-      List<EventContext> eventContexts = getEventContext(instanceRole);
+      // compute result from EventContext structure and event cache
+      getEventContext(instanceRole);
 
       // get TimeLapse from cache
-      // if not present, compute it from EventContext structure
-      Optional<EventContext> endEventContext = eventContexts.stream()
-          .filter(eventContext -> end.equals(eventContext.getElement())).findFirst();
-      if (endEventContext.isPresent() && endEventContext.get().getParent() instanceof CapellaElement) {
-        putEndToEventCache(end, (CapellaElement) endEventContext.get().getParent());
-      }
       timeLapse = getEndToEventCache(end);
     }
     return timeLapse;
@@ -111,8 +110,7 @@ public class EventContextServices {
       List<EventContext> eventContexts = getEventContext(instanceRole);
 
       directEvents = eventContexts.stream().filter(eventContext -> element.equals(eventContext.getParent()))
-          .map(eventContext -> eventContext.getElement()).filter(event -> event != element).distinct()
-          .collect(Collectors.toList());
+          .map(EventContext::getElement).filter(event -> event != element).distinct().collect(Collectors.toList());
       putElementToContainerCache(element, directEvents);
     }
     return directEvents;
@@ -174,9 +172,9 @@ public class EventContextServices {
     Scenario scenario = SequenceDiagramServices.getScenario(instanceRole);
 
     // initialize ancestors
-    Stack<EObject> ancestors = new Stack<EObject>();
+    Deque<EObject> ancestors = new ArrayDeque<>();
     ancestors.push(instanceRole);
-    List<EventContext> result = new ArrayList<EventContext>();
+    List<EventContext> result = new ArrayList<>();
 
     // cache Execution.start -> Execution and Execution.finish -> Execution
     // cache StateFragment.start -> Execution and StateFragment.finish -> Execution
@@ -213,13 +211,13 @@ public class EventContextServices {
    * Compute EventStructure for MessageEnd.
    * 
    * @param ancestors
-   *          Stack<EObject>
+   *          Deque<EObject>
    * @param result
    *          List<EventContext>
    * @param end
    *          MessageEnd
    */
-  private static void visit(Stack<EObject> ancestors, List<EventContext> result, MessageEnd end) {
+  private static void visit(Deque<EObject> ancestors, List<EventContext> result, MessageEnd end) {
     Optional<CapellaElement> container = getEndToEventCache(end);
     if (container.isPresent() && container.get() instanceof Execution
         && ((Execution) container.get()).getStart() == end) {
@@ -241,13 +239,13 @@ public class EventContextServices {
    * Compute EventStructure for InteractionState.
    * 
    * @param ancestors
-   *          Stack<EObject>
+   *          Deque<EObject>
    * @param result
    *          List<EventContext>
    * @param end
    *          InteractionState
    */
-  private static void visit(Stack<EObject> ancestors, List<EventContext> result, InteractionState end) {
+  private static void visit(Deque<EObject> ancestors, List<EventContext> result, InteractionState end) {
     Optional<CapellaElement> container = getEndToEventCache(end);
     if (container.isPresent() && container.get() instanceof StateFragment
         && ((StateFragment) container.get()).getStart() == end) {
@@ -267,13 +265,13 @@ public class EventContextServices {
    * Compute EventStructure for ExecutionEnd.
    * 
    * @param ancestors
-   *          Stack<EObject>
+   *          Deque<EObject>
    * @param result
    *          List<EventContext>
    * @param end
    *          ExecutionEnd
    */
-  private static void visit(Stack<EObject> ancestors, List<EventContext> result, ExecutionEnd end) {
+  private static void visit(Deque<EObject> ancestors, List<EventContext> result, ExecutionEnd end) {
     Execution execution = end.getExecution();
     if (execution != null && end.getExecution().getStart() == end) {
       result.add(new EventContext(ancestors.peek(), execution, true, ancestors.size() + 1));
@@ -310,10 +308,10 @@ public class EventContextServices {
    */
   private static void computeTimeLapseStartAndEndCache(Scenario scenario) {
     // cache Execution.start -> Execution and Execution.finish -> Execution
-    Stream<TimeLapse> timeLapses = scenario.getOwnedTimeLapses().stream()
-        .filter(tl -> !(tl instanceof AbstractFragment));
     // scan timelapse only one time
     if (getEndToEventCache().isEmpty()) {
+      Stream<TimeLapse> timeLapses = scenario.getOwnedTimeLapses().stream()
+          .filter(tl -> !(tl instanceof AbstractFragment));
       timeLapses.forEach(e -> {
         if (e.getStart() instanceof MessageEnd) {
           putEndToEventCache(e.getStart(), e);

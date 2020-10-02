@@ -82,8 +82,7 @@ public class SequenceDiagramServices {
     } else if (eObject instanceof AbstractEnd) {
       return getInteractionCache(AbstractEnd::getCovered, (AbstractEnd) eObject);
     } else if (eObject instanceof StateFragment) {
-      return getInteractionCache(state -> currentInstanceRole(((StateFragment) state).getStart()),
-          (StateFragment) eObject);
+      return getInteractionCache(state -> currentInstanceRole(((StateFragment) state).getStart()), eObject);
     } else {
       return null;
     }
