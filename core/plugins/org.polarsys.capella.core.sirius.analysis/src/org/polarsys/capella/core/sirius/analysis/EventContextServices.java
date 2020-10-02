@@ -16,6 +16,7 @@ import static org.polarsys.capella.core.sirius.analysis.refresh.extension.Intera
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getEndToEventCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getInstanceRoleToEventContextCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getInteractionCache;
+import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.isRefreshCacheEnabled;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putElementToContainerCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putEndToEventCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putInstanceRoleToEventContextCache;
@@ -73,6 +74,9 @@ public class EventContextServices {
 
       // get TimeLapse from cache
       timeLapse = getEndToEventCache(end);
+      if (!isRefreshCacheEnabled()) {
+        getEndToEventCache().clear();
+      }
     }
     return timeLapse;
   }
@@ -88,7 +92,9 @@ public class EventContextServices {
     List<EventContext> eventContexts = getInstanceRoleToEventContextCache(instanceRole);
     if (eventContexts == null) {
       eventContexts = computeInstanceRoleEventContextStructure(instanceRole);
-      putInstanceRoleToEventContextCache(instanceRole, eventContexts);
+      if (isRefreshCacheEnabled()) {
+        putInstanceRoleToEventContextCache(instanceRole, eventContexts);
+      }
     }
     return eventContexts;
   }
@@ -111,7 +117,9 @@ public class EventContextServices {
 
       directEvents = eventContexts.stream().filter(eventContext -> element.equals(eventContext.getParent()))
           .map(EventContext::getElement).filter(event -> event != element).distinct().collect(Collectors.toList());
-      putElementToContainerCache(element, directEvents);
+      if (isRefreshCacheEnabled()) {
+        putElementToContainerCache(element, directEvents);
+      }
     }
     return directEvents;
   }

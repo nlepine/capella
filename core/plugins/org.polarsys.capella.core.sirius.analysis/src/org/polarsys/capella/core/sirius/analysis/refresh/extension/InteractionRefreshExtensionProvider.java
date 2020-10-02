@@ -19,24 +19,24 @@ import org.eclipse.sirius.diagram.sequence.SequenceDDiagram;
 
 public class InteractionRefreshExtensionProvider implements IRefreshExtensionProvider {
 
-    private static final InteractionRefreshExtension REFRESH_EXTENSION = new InteractionRefreshExtension();
+  private static final InteractionRefreshExtension REFRESH_EXTENSION = new InteractionRefreshExtension();
 
-    public InteractionRefreshExtensionProvider() {
-        // empty constructor
-    }
+  public InteractionRefreshExtensionProvider() {
+    // empty constructor
+  }
 
-    /**
-     * @see org.eclipse.sirius.business.api.refresh.IRefreshExtensionProvider#getRefreshExtension(org.eclipse.sirius.DDiagram)
-     */
-    public IRefreshExtension getRefreshExtension(DDiagram viewPoint_p) {
-        return REFRESH_EXTENSION;
-    }
+  /**
+   * @see org.eclipse.sirius.business.api.refresh.IRefreshExtensionProvider#getRefreshExtension(org.eclipse.sirius.DDiagram)
+   */
+  public IRefreshExtension getRefreshExtension(DDiagram viewPoint) {
+    return REFRESH_EXTENSION;
+  }
 
-    /**
-     * @see org.eclipse.sirius.business.api.refresh.IRefreshExtensionProvider#provides(org.eclipse.sirius.DDiagram)
-     */
-    public boolean provides(DDiagram viewPoint_p) {
-        return viewPoint_p instanceof SequenceDDiagram;
-    }
+  /**
+   * @see org.eclipse.sirius.business.api.refresh.IRefreshExtensionProvider#provides(org.eclipse.sirius.DDiagram)
+   */
+  public boolean provides(DDiagram viewPoint) {
+    return viewPoint instanceof SequenceDDiagram;
+  }
 
 }
