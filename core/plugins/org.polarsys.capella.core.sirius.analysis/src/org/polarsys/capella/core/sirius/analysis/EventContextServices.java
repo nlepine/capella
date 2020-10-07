@@ -12,14 +12,15 @@
  *******************************************************************************/
 package org.polarsys.capella.core.sirius.analysis;
 
-import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getElementToContainerCache;
-import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getEndToEventCache;
+import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getDirectEventsFromCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getInstanceRoleToEventContextCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getInteractionCache;
+import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getInteractionFragmentToTimeLapseCache;
+import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.getTimeLapseFromCache;
 import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.isRefreshCacheEnabled;
-import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putElementToContainerCache;
-import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putEndToEventCache;
-import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putInstanceRoleToEventContextCache;
+import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putDirectEventsInCache;
+import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putInstanceRoleToEventContextsCache;
+import static org.polarsys.capella.core.sirius.analysis.refresh.extension.InteractionRefreshExtension.putTimeLapseInCache;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import org.polarsys.capella.core.data.interaction.InteractionFragment;
 import org.polarsys.capella.core.data.interaction.InteractionState;
 import org.polarsys.capella.core.data.interaction.MessageEnd;
 import org.polarsys.capella.core.data.interaction.Scenario;
+import org.polarsys.capella.core.data.interaction.SequenceMessage;
 import org.polarsys.capella.core.data.interaction.StateFragment;
 import org.polarsys.capella.core.data.interaction.TimeLapse;
 
@@ -58,42 +60,18 @@ public class EventContextServices {
   }
 
   /**
-   * Return abstract end covered TimeLapse/InstanceRole.
-   * 
-   * @param end
-   *          AbstractEnd
-   * @param instanceRole
-   *          InstanceRole
-   * @return TimeLapse
-   */
-  public static Optional<CapellaElement> getEvent(AbstractEnd end, InstanceRole instanceRole) {
-    Optional<CapellaElement> timeLapse = getEndToEventCache(end);
-    if (!timeLapse.isPresent()) {
-      // compute result from EventContext structure and event cache
-      getEventContext(instanceRole);
-
-      // get TimeLapse from cache
-      timeLapse = getEndToEventCache(end);
-      if (!isRefreshCacheEnabled()) {
-        getEndToEventCache().clear();
-      }
-    }
-    return timeLapse;
-  }
-
-  /**
    * Compute EventContext structure from InstanceRole if needed and put it in cache.
    * 
    * @param instanceRole
    *          InstanceRole
    * @return List<EventContext>
    */
-  private static List<EventContext> getEventContext(InstanceRole instanceRole) {
+  public static List<EventContext> getEventContexts(InstanceRole instanceRole) {
     List<EventContext> eventContexts = getInstanceRoleToEventContextCache(instanceRole);
     if (eventContexts == null) {
       eventContexts = computeInstanceRoleEventContextStructure(instanceRole);
       if (isRefreshCacheEnabled()) {
-        putInstanceRoleToEventContextCache(instanceRole, eventContexts);
+        putInstanceRoleToEventContextsCache(instanceRole, eventContexts);
       }
     }
     return eventContexts;
@@ -110,15 +88,15 @@ public class EventContextServices {
    * @return Collection<EObject>
    */
   public static Collection<EObject> getDirectEvents(EObject element, InstanceRole instanceRole) {
-    Collection<EObject> directEvents = getElementToContainerCache(element);
+    Collection<EObject> directEvents = getDirectEventsFromCache(element);
     if (directEvents == null) {
       // compute result from EventContext structure
-      List<EventContext> eventContexts = getEventContext(instanceRole);
+      List<EventContext> eventContexts = getEventContexts(instanceRole);
 
       directEvents = eventContexts.stream().filter(eventContext -> element.equals(eventContext.getParent()))
           .map(EventContext::getElement).filter(event -> event != element).distinct().collect(Collectors.toList());
       if (isRefreshCacheEnabled()) {
-        putElementToContainerCache(element, directEvents);
+        putDirectEventsInCache(element, directEvents);
       }
     }
     return directEvents;
@@ -135,7 +113,7 @@ public class EventContextServices {
    */
   public static Collection<Execution> getExecutionDirectEvents(EObject element, InstanceRole instanceRole) {
     // get executions from cache
-    Collection<EObject> directEvents = getElementToContainerCache(element);
+    Collection<EObject> directEvents = getDirectEventsFromCache(element);
     if (directEvents != null) {
       return directEvents.stream().filter(Execution.class::isInstance).map(Execution.class::cast)
           .collect(Collectors.toList());
@@ -156,7 +134,7 @@ public class EventContextServices {
    */
   public static List<StateFragment> getStateFragmentDirectEvents(EObject element, InstanceRole instanceRole) {
     // get states from cache
-    Collection<EObject> directEvents = getElementToContainerCache(element);
+    Collection<EObject> directEvents = getDirectEventsFromCache(element);
     if (directEvents != null) {
       return directEvents.stream().filter(StateFragment.class::isInstance).map(StateFragment.class::cast)
           .collect(Collectors.toList());
@@ -180,12 +158,14 @@ public class EventContextServices {
     Scenario scenario = SequenceDiagramServices.getScenario(instanceRole);
 
     // initialize ancestors
-    Deque<EObject> ancestors = new ArrayDeque<>();
+    Deque<CapellaElement> ancestors = new ArrayDeque<>();
     ancestors.push(instanceRole);
     List<EventContext> result = new ArrayList<>();
 
-    // cache Execution.start -> Execution and Execution.finish -> Execution
-    // cache StateFragment.start -> Execution and StateFragment.finish -> Execution
+    // Cache missing info from M2 :
+    // - cache Execution.start -> Execution and Execution.finish -> Execution when the end is a MessageEnd
+    // - cache StateFragment.start -> InteractionState and StateFragment.finish -> InteractionState
+    // (ExecutionEnd has a getExecution() method)(ExecutionEnd has a getExecution() method)
     computeTimeLapseStartAndEndCache(scenario);
 
     // compute Execution/StateFragment and InteractionFragment structure
@@ -194,20 +174,21 @@ public class EventContextServices {
     ends.forEachOrdered(end -> {
       InstanceRole covered = getCoveredInstanceRole(end);
       if (covered != null && covered.equals(instanceRole)) {
+        Optional<TimeLapse> timeLapse = getTimeLapseFromCache(end);
 
         // Execution End case
         if (end instanceof ExecutionEnd) {
-          visit(ancestors, result, (ExecutionEnd) end);
+          visit(ancestors, result, (ExecutionEnd) end, timeLapse);
         }
 
         // Interaction State case
         if (end instanceof InteractionState) {
-          visit(ancestors, result, (InteractionState) end);
+          visit(ancestors, result, (InteractionState) end, timeLapse);
         }
 
         // Message End case
         if (end instanceof MessageEnd) {
-          visit(ancestors, result, (MessageEnd) end);
+          visit(ancestors, result, (MessageEnd) end, timeLapse);
         }
 
       }
@@ -225,22 +206,77 @@ public class EventContextServices {
    * @param end
    *          MessageEnd
    */
-  private static void visit(Deque<EObject> ancestors, List<EventContext> result, MessageEnd end) {
-    Optional<CapellaElement> container = getEndToEventCache(end);
-    if (container.isPresent() && container.get() instanceof Execution
-        && ((Execution) container.get()).getStart() == end) {
-      result.add(new EventContext(ancestors.peek(), container.get(), true, ancestors.size() + 1));
-      ancestors.push(container.get());
+  private static void visit(Deque<CapellaElement> ancestors, List<EventContext> result, MessageEnd end,
+      Optional<TimeLapse> timeLapse) {
+
+    // Execution start / SyncCall and ASyncCall
+    if (timeLapse.isPresent() && timeLapse.get() instanceof Execution
+        && ((Execution) timeLapse.get()).getStart() == end) {
+      result.add(new EventContext(ancestors.peek(), timeLapse.get(), true, ancestors.size() + 1));
+      ancestors.push(timeLapse.get());
     }
 
-    if (container.isPresent() && container.get() instanceof Execution
-        && ((Execution) container.get()).getFinish() == end) {
+    // Message - EventContext to directly know which execution/instanceRole DNode must be source/target of the
+    // message's DEdge
+    // Handle all cases :
+    // - sending end of the main branch (no execution found in endToEventCache)
+    // - receiving end of the main branch (start of execution found in endToEvent cache and pushed on the ancestor
+    // stack)
+    // - sending end of the return branch (end of execution found in endToEvent cache, not yet removed from the
+    // ancestor cache)
+    // - receiving end of the return branch (no execution found in endToEvent cache).
+    SequenceMessage message = end.getMessage();
+    if (message != null) {
+      result.add(new EventContext(ancestors.peek(), message, end.equals(message.getSendingEnd()), ancestors.size()));
+    }
+
+    // Execution with return branch end / SyncCall
+    if (timeLapse.isPresent() && timeLapse.get() instanceof Execution
+        && ((Execution) timeLapse.get()).getFinish() == end) {
       ancestors.pop();
-      result.add(new EventContext(ancestors.peek(), container.get(), false, ancestors.size() + 1));
+      result.add(new EventContext(ancestors.peek(), timeLapse.get(), false, ancestors.size() + 1));
     }
-    if (!container.isPresent()) {
-      putEndToEventCache(end, (CapellaElement) ancestors.peek());
-    }
+
+    // @formatter:off
+        //  The Following diagram would result in
+        //
+        //     | IR1 |   | IR2 ]   | IR3 ] 
+        //        |         |         |
+        //        |         |         |
+        //        |-------> -         |   e1  m1
+        //        |        | |------> -   e2  m2
+        //        |        | |       | |
+        //        |        | - <-----| |  e3  m3
+        //        |        || |      | |
+        //        |        || |      | |
+        //        |        | - ----->| |      return_m3
+        //        |        | |       | |
+        //        |<------- -        | |      return_m1
+        //        |         |         - 
+        //        |         |         | 
+        
+        // would result the following structures:
+        
+        //  For IR1: 
+        //   EventContext(IR1, m1, true, 1)
+        //   EventContext(IR1, return_m1, false, 1)
+        //
+        //  For IR1: 
+        //   EventContext(IR2, e1, true, 2)
+        //   EventContext(e1, m1, false, 2)
+        //   EventContext(e1, m2, true, 2)
+        //   EventContext(e1, e3, true, 3)
+        //   EventContext(e3, m3, false, 3)
+        //   EventContext(e3, return_m3, true, 3)
+        //   EventContext(e1, e3, false, 3)
+        //   EventContext(e1, return_m1 true, 2)
+        //   EventContext(IR2, e1, false, 2)
+        //
+        //  For IR3: 
+        //   EventContext(IR3, e3, true, 2)
+        //   EventContext(e3, m2, false, 2)
+        //   EventContext(IR3, e3, false, 2)
+        // @formatter:on
   }
 
   /**
@@ -253,19 +289,16 @@ public class EventContextServices {
    * @param end
    *          InteractionState
    */
-  private static void visit(Deque<EObject> ancestors, List<EventContext> result, InteractionState end) {
-    Optional<CapellaElement> container = getEndToEventCache(end);
-    if (container.isPresent() && container.get() instanceof StateFragment
-        && ((StateFragment) container.get()).getStart() == end) {
-      result.add(new EventContext(ancestors.peek(), container.get(), true, ancestors.size() + 1));
+  private static void visit(Deque<CapellaElement> ancestors, List<EventContext> result, InteractionState end,
+      Optional<TimeLapse> timeLapse) {
+    if (timeLapse.isPresent() && timeLapse.get() instanceof StateFragment
+        && ((StateFragment) timeLapse.get()).getStart() == end) {
+      result.add(new EventContext(ancestors.peek(), timeLapse.get(), true, ancestors.size() + 1));
     }
 
-    if (container.isPresent() && container.get() instanceof StateFragment
-        && ((StateFragment) container.get()).getFinish() == end) {
-      result.add(new EventContext(ancestors.peek(), container.get(), false, ancestors.size() + 1));
-    }
-    if (!container.isPresent()) {
-      putEndToEventCache(end, (CapellaElement) ancestors.peek());
+    if (timeLapse.isPresent() && timeLapse.get() instanceof StateFragment
+        && ((StateFragment) timeLapse.get()).getFinish() == end) {
+      result.add(new EventContext(ancestors.peek(), timeLapse.get(), false, ancestors.size() + 1));
     }
   }
 
@@ -279,15 +312,18 @@ public class EventContextServices {
    * @param end
    *          ExecutionEnd
    */
-  private static void visit(Deque<EObject> ancestors, List<EventContext> result, ExecutionEnd end) {
-    Execution execution = end.getExecution();
-    if (execution != null && end.getExecution().getStart() == end) {
-      result.add(new EventContext(ancestors.peek(), execution, true, ancestors.size() + 1));
-      ancestors.push(execution);
+  private static void visit(Deque<CapellaElement> ancestors, List<EventContext> result, ExecutionEnd end,
+      Optional<TimeLapse> timeLapse) {
+    // Should not happen in current implementation of Capella Sequence diagrams
+    if (timeLapse.isPresent() && timeLapse.get().getStart() == end) {
+      result.add(new EventContext(ancestors.peek(), timeLapse.get(), true, ancestors.size() + 1));
+      ancestors.push(timeLapse.get());
     }
-    if (execution != null && end.getExecution().getFinish() == end) {
+
+    // Execution without return branch end / ASyncCall
+    if (timeLapse.isPresent() && timeLapse.get().getFinish() == end) {
       ancestors.pop();
-      result.add(new EventContext(ancestors.peek(), execution, false, ancestors.size() + 1));
+      result.add(new EventContext(ancestors.peek(), timeLapse.get(), false, ancestors.size() + 1));
     }
   }
 
@@ -317,22 +353,17 @@ public class EventContextServices {
   private static void computeTimeLapseStartAndEndCache(Scenario scenario) {
     // cache Execution.start -> Execution and Execution.finish -> Execution
     // scan timelapse only one time
-    if (getEndToEventCache().isEmpty()) {
+    if (getInteractionFragmentToTimeLapseCache().isEmpty()) {
       Stream<TimeLapse> timeLapses = scenario.getOwnedTimeLapses().stream()
           .filter(tl -> !(tl instanceof AbstractFragment));
       timeLapses.forEach(e -> {
-        if (e.getStart() instanceof MessageEnd) {
-          putEndToEventCache(e.getStart(), e);
-        }
-        if (e.getFinish() instanceof MessageEnd) {
-          putEndToEventCache(e.getFinish(), e);
-        }
-        if (e.getStart() instanceof InteractionState) {
-          putEndToEventCache(e.getStart(), e);
-        }
-        if (e.getFinish() instanceof InteractionState) {
-          putEndToEventCache(e.getFinish(), e);
-        }
+        // Keep Interaction to TimeLapse info in cache
+        // M2 allows to retrieve an Execution from an ExecutionEnd (execution.getFinish() when there is no
+        // return branch : ASyncCall)
+        // but not an Execution from a MessagEnd (SyncCall and ASyncCall) or a StateFragment from an
+        // InteractionState.
+        putTimeLapseInCache(e.getStart(), e);
+        putTimeLapseInCache(e.getFinish(), e);
       });
     }
   }

@@ -35,7 +35,6 @@ import org.eclipse.ui.PlatformUI;
 import org.polarsys.capella.common.data.modellingcore.AbstractType;
 import org.polarsys.capella.common.helpers.TransactionHelper;
 import org.polarsys.capella.common.ui.services.UIUtil;
-import org.polarsys.capella.core.data.capellacore.CapellaElement;
 import org.polarsys.capella.core.data.cs.Part;
 import org.polarsys.capella.core.data.information.AbstractInstance;
 import org.polarsys.capella.core.data.information.ExchangeItem;
@@ -63,6 +62,7 @@ import org.polarsys.capella.core.data.oa.OperationalCapability;
 import org.polarsys.capella.core.model.helpers.ScenarioExt;
 import org.polarsys.capella.core.model.helpers.SequenceMessageExt;
 import org.polarsys.capella.core.platform.sirius.ui.commands.CapellaDeleteCommand;
+import org.polarsys.capella.core.sirius.analysis.EventContextServices.EventContext;
 import org.polarsys.capella.core.sirius.analysis.activator.SiriusViewActivator;
 
 public class SequenceDiagramServices {
@@ -111,22 +111,28 @@ public class SequenceDiagramServices {
     MessageEnd end = message.getSendingEnd();
     if (end == null) {
       return message; // found message case
+    } else {
+      InstanceRole currentInstanceRole = currentInstanceRole(end);
+      List<EventContext> eventContexts = EventContextServices.getEventContexts(currentInstanceRole);
+
+      Optional<EventContext> sendingEvent = eventContexts.stream()
+          .filter(ec -> ec.isStart() && ec.getElement().equals(message)).findFirst();
+      return sendingEvent.isPresent() ? sendingEvent.get().getParent() : currentInstanceRole;
     }
-    return getExecutionOrCoveredOfMessageEnd(end);
   }
 
   public static EObject getReceivingEnd(SequenceMessage message) {
     MessageEnd end = message.getReceivingEnd();
     if (end == null) {
       return message; // lost message case
-    }
-    return getExecutionOrCoveredOfMessageEnd(end);
-  }
+    } else {
+      InstanceRole currentInstanceRole = currentInstanceRole(end);
+      List<EventContext> eventContexts = EventContextServices.getEventContexts(currentInstanceRole);
 
-  private static EObject getExecutionOrCoveredOfMessageEnd(MessageEnd end) {
-    Optional<CapellaElement> execution = EventContextServices.getEvent(end, currentInstanceRole(end));
-    // null never happen
-    return execution.isPresent() ? execution.get() : null;
+      Optional<EventContext> receivingEvent = eventContexts.stream()
+          .filter(ec -> !ec.isStart() && ec.getElement().equals(message)).findFirst();
+      return receivingEvent.isPresent() ? receivingEvent.get().getParent() : currentInstanceRole;
+    }
   }
 
   /**

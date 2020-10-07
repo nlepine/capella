@@ -21,13 +21,14 @@ import java.util.function.Function;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.sirius.diagram.DDiagram;
-import org.polarsys.capella.core.data.capellacore.CapellaElement;
+import org.eclipse.sirius.diagram.business.api.refresh.IRefreshExtension;
 import org.polarsys.capella.core.data.helpers.cache.Cache;
 import org.polarsys.capella.core.data.interaction.InstanceRole;
 import org.polarsys.capella.core.data.interaction.InteractionFragment;
+import org.polarsys.capella.core.data.interaction.TimeLapse;
 import org.polarsys.capella.core.sirius.analysis.EventContextServices.EventContext;
 
-public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtension {
+public class InteractionRefreshExtension implements IRefreshExtension {
 
   /**
    * Generic cache (basically for getCovered).
@@ -38,17 +39,17 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    * Cache for MessageEnd -> Execution/InstanceRole and InteractionState -> StateFragment. (Cross referencer might be a
    * way to get this information.)
    */
-  private static Map<InteractionFragment, CapellaElement> endToEventCache = new ConcurrentHashMap<>();
+  private static Map<InteractionFragment, TimeLapse> interactionFragmentToTimeLapseCache = new ConcurrentHashMap<>();
 
   /**
    * Cache for ChildExecution -> ParentExecution and StateFragment -> ParentExecution.
    */
-  private static Map<EObject, Collection<EObject>> elementToContainerCache = new ConcurrentHashMap<>();
+  private static Map<EObject, Collection<EObject>> directEventsCache = new ConcurrentHashMap<>();
 
   /**
    * Cache for InstanceRole -> EventContext structure.
    */
-  private static Map<InstanceRole, List<EventContext>> instanceRoleToEventContextCache = new ConcurrentHashMap<>();
+  private static Map<InstanceRole, List<EventContext>> instanceRoleToEventContextsCache = new ConcurrentHashMap<>();
 
   /**
    * Is InteractionRefreshExtension caches enabled ?
@@ -74,9 +75,9 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
 
   private void clearCaches() {
     interactionCache.clearCache();
-    elementToContainerCache.clear();
-    instanceRoleToEventContextCache.clear();
-    endToEventCache.clear();
+    directEventsCache.clear();
+    instanceRoleToEventContextsCache.clear();
+    interactionFragmentToTimeLapseCache.clear();
   }
 
   /**
@@ -98,7 +99,7 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    * @return List<EventContext>
    */
   public static List<EventContext> getInstanceRoleToEventContextCache(InstanceRole instanceRole) {
-    return instanceRoleToEventContextCache.get(instanceRole);
+    return instanceRoleToEventContextsCache.get(instanceRole);
   }
 
   /**
@@ -109,8 +110,8 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    * @param structure
    *          List<EventContext>
    */
-  public static void putInstanceRoleToEventContextCache(InstanceRole instanceRole, List<EventContext> structure) {
-    instanceRoleToEventContextCache.put(instanceRole, structure);
+  public static void putInstanceRoleToEventContextsCache(InstanceRole instanceRole, List<EventContext> structure) {
+    instanceRoleToEventContextsCache.put(instanceRole, structure);
   }
 
   /**
@@ -120,8 +121,8 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    *          EObject
    * @return Collection<EObject>
    */
-  public static Collection<EObject> getElementToContainerCache(EObject capellaElement) {
-    return elementToContainerCache.get(capellaElement);
+  public static Collection<EObject> getDirectEventsFromCache(EObject capellaElement) {
+    return directEventsCache.get(capellaElement);
   }
 
   /**
@@ -132,8 +133,8 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    * @param container
    *          Collection<EObject>
    */
-  public static void putElementToContainerCache(EObject element, Collection<EObject> container) {
-    elementToContainerCache.put(element, container);
+  public static void putDirectEventsInCache(EObject element, Collection<EObject> container) {
+    directEventsCache.put(element, container);
   }
 
   /**
@@ -141,8 +142,8 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    *          InteractionFragment
    * @return Event corresponding to key.
    */
-  public static Optional<CapellaElement> getEndToEventCache(InteractionFragment key) {
-    return Optional.ofNullable(endToEventCache.get(key));
+  public static Optional<TimeLapse> getTimeLapseFromCache(InteractionFragment key) {
+    return Optional.ofNullable(interactionFragmentToTimeLapseCache.get(key));
   }
 
   /**
@@ -153,15 +154,15 @@ public class InteractionRefreshExtension extends AbstractCacheAwareRefreshExtens
    * @param value
    *          Event
    */
-  public static void putEndToEventCache(InteractionFragment key, CapellaElement value) {
-    endToEventCache.put(key, value);
+  public static void putTimeLapseInCache(InteractionFragment key, TimeLapse value) {
+    interactionFragmentToTimeLapseCache.put(key, value);
   }
 
   /**
    * @return endToEventCache
    */
-  public static Map<InteractionFragment, CapellaElement> getEndToEventCache() {
-    return endToEventCache;
+  public static Map<InteractionFragment, TimeLapse> getInteractionFragmentToTimeLapseCache() {
+    return interactionFragmentToTimeLapseCache;
   }
 
   /**

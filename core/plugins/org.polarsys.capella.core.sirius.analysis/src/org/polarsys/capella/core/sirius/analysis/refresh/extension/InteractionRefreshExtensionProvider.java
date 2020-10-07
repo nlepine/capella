@@ -28,15 +28,15 @@ public class InteractionRefreshExtensionProvider implements IRefreshExtensionPro
   /**
    * @see org.eclipse.sirius.business.api.refresh.IRefreshExtensionProvider#getRefreshExtension(org.eclipse.sirius.DDiagram)
    */
-  public IRefreshExtension getRefreshExtension(DDiagram viewPoint) {
+  public IRefreshExtension getRefreshExtension(DDiagram diagram) {
     return REFRESH_EXTENSION;
   }
 
   /**
    * @see org.eclipse.sirius.business.api.refresh.IRefreshExtensionProvider#provides(org.eclipse.sirius.DDiagram)
    */
-  public boolean provides(DDiagram viewPoint) {
-    return viewPoint instanceof SequenceDDiagram;
+  public boolean provides(DDiagram diagram) {
+    return diagram instanceof SequenceDDiagram;
   }
 
 }
